@@ -40,16 +40,52 @@ class Plants(Resource):
 
 api.add_resource(Plants, '/plants')
 
-
 class PlantByID(Resource):
-
     def get(self, id):
-        plant = Plant.query.filter_by(id=id).first().to_dict()
-        return make_response(jsonify(plant), 200)
+        plant = Plant.query.filter_by(id=id).first()
+        if plant:
+            return make_response(jsonify(plant.to_dict()), 200)
+        else:
+            return make_response(jsonify({"error": "Plant not found"}), 404)
 
+    def patch(self, id):
+        data = request.get_json()
+        plant = Plant.query.filter_by(id=id).first()
+
+        if plant:
+            for attr in data:
+                if attr == 'is_in_stock':
+                    plant.is_in_stock = data[attr]
+                else:
+                    setattr(plant, attr, data[attr])
+
+            db.session.add(plant)
+            db.session.commit()
+
+            headers = {
+                "Content-Type": "application/json"
+            }
+
+            return make_response(plant.to_dict(), 200, headers)
+        else:
+            return make_response(jsonify({"error": "Plant not found"}), 404)
+
+    def delete(self, id):
+        plant = Plant.query.filter_by(id=id).first()
+
+        if plant:
+            db.session.delete(plant)
+            db.session.commit()
+
+            headers = {
+                "Content-Type": "application/json"
+            }
+
+            return make_response(jsonify({}), 204, headers)
+        else:
+            return make_response(jsonify({"error": "Plant not found"}), 404)
 
 api.add_resource(PlantByID, '/plants/<int:id>')
-
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
